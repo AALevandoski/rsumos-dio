@@ -1,0 +1,99 @@
+## Por que monitorar VMs no Azure?
+
+Monitorar máquinas virtuais é essencial para:
+- Identificar falhas de desempenho
+- Diagnosticar problemas de conectividade
+- Rastrear eventos críticos, como reinicializações ou exclusões
+- Ativar respostas automáticas (alertas, automações, etc.)
+- Garantir segurança e disponibilidade da aplicação
+
+---
+
+## Ferramentas e recursos usados no monitoramento
+
+### 1. **Azure Monitor**
+- Solução principal de observabilidade no Azure
+- Coleta métricas, logs, eventos e alertas
+- Integra com dashboards, alertas e automações
+
+### 2. **Log Analytics**
+- Plataforma de análise baseada em consultas KQL
+- Armazena dados de diagnóstico e permite criação de consultas avançadas
+- Pode ser habilitada em uma VM via Workspace
+
+### 3. **Agente do Azure Monitor (AMA)**
+- Recomendado para monitoramento moderno (substitui antigos agentes como o MMA/OMS)
+- Instalado nas VMs para enviar métricas e logs para o Azure Monitor e Log Analytics
+
+### 4. **Alertas**
+- Permitem configurar notificações e ações quando uma condição específica acontece
+- Exemplo: envio de e-mail quando a VM é excluída, CPU ultrapassa limite, etc.
+
+---
+
+## Como habilitar o monitoramento para VMs
+
+### 1. Ativar monitoramento básico na criação da VM
+Durante a criação de uma VM, há a opção de habilitar:
+- **Monitoramento de desempenho**
+- **Logs de diagnóstico**
+- **Agente do Azure Monitor**
+
+### 2. Associar a um workspace do Log Analytics
+Se não foi feito na criação da VM:
+1. Acesse a VM no portal do Azure
+2. Vá em **Monitoramento > Logs**
+3. Clique em **Habilitar logs de diagnóstico**
+4. Associe a um **Log Analytics workspace**
+
+> Dica: Use um único workspace para agrupar logs de várias VMs.
+
+---
+
+## Criando alertas de evento crítico (exemplo: exclusão de VM)
+
+Para monitorar a **exclusão de uma VM**, é necessário usar logs de atividades e criar um alerta baseado em evento.
+
+### Passo a passo no portal
+
+1. Vá até **Monitor > Alertas**
+2. Clique em **+ Nova Regra de Alerta**
+3. Escolha como origem o **Log de Atividades**
+4. Condição: **Operation name = Delete Virtual Machine**
+5. Ação: **Enviar notificação por e-mail, webhook ou executar uma automação**
+6. Nomeie e crie a regra
+
+### Exemplo de alerta por CLI
+
+az monitor activity-log alert create \
+  --name AlertaExclusaoVM \
+  --resource-group MeuGrupoDeRecursos \
+  --scopes /subscriptions/<ID>/resourceGroups/MeuGrupoDeRecursos \
+  --condition "category='Administrative' and operationName='Microsoft.Compute/virtualMachines/delete'" \
+  --action-group /subscriptions/<ID>/resourceGroups/MeuGrupoDeRecursos/providers/microsoft.insights/actionGroups/GrupoDeAcao
+
+Observação: é necessário já ter um grupo de ação criado.
+
+Consultas no Log Analytics (KQL)
+Exemplo: listar eventos de exclusão de VMs
+
+AzureActivity
+| where OperationNameValue == "Microsoft.Compute/virtualMachines/delete"
+| project TimeGenerated, ResourceGroup, Resource, Caller, ActivityStatusValue
+
+Exemplo: consumo de CPU médio por VM
+
+Perf
+| where ObjectName == "Processor" and CounterName == "% Processor Time"
+| summarize AvgCPU = avg(CounterValue) by Computer, bin(TimeGenerated, 1h)
+
+
+Boas práticas de monitoramento
+
+    Ative o monitoramento desde o início, na criação da VM.
+    Centralize os logs em um workspace único.
+    Crie alertas para eventos críticos (exclusão, uso excessivo de CPU/memória).
+    Use dashboards personalizados para visualizar o estado geral dos recursos.
+    Automatize respostas com grupos de ação (ex: envio de e-mail ou execução de scripts).
+
+
