@@ -41,7 +41,8 @@ az vm create \
   --size Standard_B1s
 
 Esse comando cria a VM e gera chaves SSH automaticamente.
-  Observação: o grupo de recursos precisa existir. se não crie com az group create
+Observação: o grupo de recursos precisa existir. Se necessário, crie com az group create.
+
 --------------------------------------------
 #Desanexando Disco de Máquina
 Por que desanexar?
